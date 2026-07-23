@@ -52,7 +52,7 @@ export function TravelTransition({
         }}
       />
 
-      {!resolved && <span className="text-xs tracking-[0.3em] text-zinc-500">SIGNAL RESOLVING</span>}
+      <span className={`text-xs tracking-[0.3em] text-zinc-500 ${resolved ? "invisible" : ""}`}>SIGNAL RESOLVING</span>
 
       <p className="max-w-xs font-serif text-2xl italic leading-snug text-zinc-100">
         {resolved
@@ -60,7 +60,7 @@ export function TravelTransition({
           : `${formattedYear}. The signal is faint, if the count holds.`}
       </p>
 
-      {!resolved && <span className="text-xs tracking-[0.3em] text-zinc-500">TAP TO RETURN</span>}
+      <span className={`text-xs tracking-[0.3em] text-zinc-500 ${resolved ? "invisible" : ""}`}>TAP TO RETURN</span>
     </div>
   );
 }

@@ -2,12 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent, WheelEvent } from "react";
-import { MAX_YEAR, MIN_YEAR, formatYear, formatYearRange, type SubEra } from "@/lib/time-periods";
+import { MAX_YEAR, MIN_YEAR, formatYear, formatYearRange, getYearStep, quantizeYear, type SubEra } from "@/lib/time-periods";
 
 // First pass at the "quick across centuries, precise on a single year" scrub interaction
 // from docs/features/home/overview.md — hand-rolled drag + momentum, not a library. See the
 // open architecture question in docs/architecture.md if this doesn't feel right and needs
 // a proper physics/gesture library instead.
+//
+// Beyond the "fine" range (see lib/time-periods.ts), the picker steps by 10 years instead of
+// 1 — there's less "signal" the farther out you go, so pretending at year-by-year precision
+// doesn't make sense. `rawYearRef` tracks a continuous, unquantized value so slow drags in the
+// coarse zone still accumulate correctly frame-to-frame; only the emitted/displayed value is
+// quantized to the current step.
 const PIXELS_PER_YEAR = 6;
 const TICK_EVERY_YEARS = 5;
 const TICK_SPACING_PX = PIXELS_PER_YEAR * TICK_EVERY_YEARS;
@@ -31,33 +37,43 @@ export function YearPicker({
   accentColor: string;
   onChange: (year: number) => void;
 }) {
-  const [displayYear, setDisplayYear] = useState(year);
+  const [displayYear, setDisplayYear] = useState(quantizeYear(year));
   const [dragging, setDragging] = useState(false);
 
   const dragState = useRef({
     pointerId: -1,
     startX: 0,
-    startYear: year,
     lastX: 0,
     lastTime: 0,
     velocity: 0, // px/ms
   });
   const momentumFrame = useRef<number | null>(null);
-  const displayYearRef = useRef(year);
+  const rawYearRef = useRef(year);
+  const displayYearRef = useRef(quantizeYear(year));
 
   useEffect(() => {
     if (!dragging && momentumFrame.current === null) {
-      setDisplayYear(year);
-      displayYearRef.current = year;
+      rawYearRef.current = year;
+      const quantized = quantizeYear(year);
+      displayYearRef.current = quantized;
+      setDisplayYear(quantized);
     }
   }, [year, dragging]);
 
+  // `explicitStep`, when given, is the step size the caller used to compute `raw` (e.g. a
+  // keyboard or tap nudge). Quantizing against that step — rather than re-deriving it from
+  // the landed value — avoids a dead keypress right at a fine/coarse boundary: e.g. at 1650
+  // (step 1) pressing left lands on 1649, which is itself in the coarse zone (step 10) and
+  // would round back up to 1650 if we quantized against its own zone.
   const commit = useCallback(
-    (raw: number) => {
+    (raw: number, explicitStep?: number) => {
       const clamped = clampYear(raw);
-      displayYearRef.current = clamped;
-      setDisplayYear(clamped);
-      onChange(Math.round(clamped));
+      rawYearRef.current = clamped;
+      const step = explicitStep ?? getYearStep(clamped);
+      const quantized = Math.round(clamped / step) * step;
+      displayYearRef.current = quantized;
+      setDisplayYear(quantized);
+      onChange(quantized);
     },
     [onChange],
   );
@@ -76,8 +92,9 @@ export function YearPicker({
       lastTime = now;
       const state = dragState.current;
       state.velocity *= Math.pow(FRICTION_PER_MS, dt);
-      const deltaYears = (-state.velocity * dt) / PIXELS_PER_YEAR;
-      const clamped = clampYear(displayYearRef.current + deltaYears);
+      const yearStep = getYearStep(rawYearRef.current);
+      const deltaYears = ((-state.velocity * dt) / PIXELS_PER_YEAR) * yearStep;
+      const clamped = clampYear(rawYearRef.current + deltaYears);
       commit(clamped);
       if (Math.abs(state.velocity) > MOMENTUM_STOP_VELOCITY && clamped > MIN_YEAR && clamped < MAX_YEAR) {
         momentumFrame.current = requestAnimationFrame(step);
@@ -98,7 +115,6 @@ export function YearPicker({
     dragState.current = {
       pointerId: event.pointerId,
       startX: event.clientX,
-      startYear: displayYearRef.current,
       lastX: event.clientX,
       lastTime: performance.now(),
       velocity: 0,
@@ -113,11 +129,15 @@ export function YearPicker({
     const now = performance.now();
     const dt = Math.max(1, now - state.lastTime);
     state.velocity = (event.clientX - state.lastX) / dt;
+
+    const deltaX = event.clientX - state.lastX;
+    const yearStep = getYearStep(rawYearRef.current);
+    const deltaYears = (-deltaX / PIXELS_PER_YEAR) * yearStep;
+
     state.lastX = event.clientX;
     state.lastTime = now;
 
-    const deltaYears = -(event.clientX - state.startX) / PIXELS_PER_YEAR;
-    commit(state.startYear + deltaYears);
+    commit(rawYearRef.current + deltaYears);
   }
 
   function handlePointerUp(event: PointerEvent<HTMLDivElement>) {
@@ -130,7 +150,8 @@ export function YearPicker({
     if (totalMove < TAP_MOVE_THRESHOLD_PX) {
       const rect = event.currentTarget.getBoundingClientRect();
       const center = rect.left + rect.width / 2;
-      commit(displayYearRef.current + (event.clientX < center ? -1 : 1));
+      const yearStep = getYearStep(rawYearRef.current);
+      commit(rawYearRef.current + (event.clientX < center ? -yearStep : yearStep), yearStep);
       return;
     }
 
@@ -143,7 +164,8 @@ export function YearPicker({
     event.preventDefault();
     stopMomentum();
     const delta = event.deltaX !== 0 ? event.deltaX : event.deltaY;
-    commit(displayYearRef.current + delta / PIXELS_PER_YEAR);
+    const yearStep = getYearStep(rawYearRef.current);
+    commit(rawYearRef.current + (delta / PIXELS_PER_YEAR) * yearStep);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
@@ -159,25 +181,26 @@ export function YearPicker({
       event.preventDefault();
       return;
     }
-    const jumps: Record<string, number> = {
-      ArrowRight: 1,
-      ArrowUp: 1,
-      ArrowLeft: -1,
-      ArrowDown: -1,
-      PageUp: 25,
-      PageDown: -25,
+    const yearStep = getYearStep(rawYearRef.current);
+    const jumps: Record<string, { delta: number; step?: number }> = {
+      ArrowRight: { delta: yearStep, step: yearStep },
+      ArrowUp: { delta: yearStep, step: yearStep },
+      ArrowLeft: { delta: -yearStep, step: yearStep },
+      ArrowDown: { delta: -yearStep, step: yearStep },
+      PageUp: { delta: 25 },
+      PageDown: { delta: -25 },
     };
     const jump = jumps[event.key];
     if (jump !== undefined) {
       stopMomentum();
-      commit(displayYearRef.current + jump);
+      commit(rawYearRef.current + jump.delta, jump.step);
       event.preventDefault();
     }
   }
 
   useEffect(() => stopMomentum, [stopMomentum]);
 
-  const rounded = Math.round(displayYear);
+  const rounded = displayYear;
   const tickOffset = -((displayYear * PIXELS_PER_YEAR) % TICK_SPACING_PX);
   const centerLabel = formatYear(rounded);
 
@@ -216,7 +239,7 @@ export function YearPicker({
         </span>
         <span
           aria-hidden
-          className={`pointer-events-none relative z-10 px-16 text-center font-serif font-bold tabular-nums text-zinc-50 ${
+          className={`pointer-events-none relative z-10 whitespace-nowrap px-16 text-center font-serif font-bold tabular-nums text-zinc-50 ${
             centerLabel.length > 5 ? "text-[3.6rem]" : "text-[5.4rem]"
           }`}
           style={{ textShadow: `0 0 28px ${accentColor}` }}

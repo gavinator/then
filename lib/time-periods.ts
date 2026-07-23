@@ -24,6 +24,22 @@ export const MIN_YEAR = -3000;
 export const MAX_YEAR = 3000;
 export const DEFAULT_YEAR = 2026;
 
+// Beyond these bounds there's less "signal" the farther out you go, so the year picker
+// steps by COARSE_YEAR_STEP instead of single years — no need to pretend at year-by-year
+// precision for the deep past/future.
+const FINE_RANGE_START_YEAR = 1650;
+const FINE_RANGE_END_YEAR = 2300;
+const COARSE_YEAR_STEP = 10;
+
+export function getYearStep(year: number): number {
+  return year < FINE_RANGE_START_YEAR || year > FINE_RANGE_END_YEAR ? COARSE_YEAR_STEP : 1;
+}
+
+export function quantizeYear(year: number): number {
+  const step = getYearStep(year);
+  return Math.round(year / step) * step;
+}
+
 export const timePeriodGroups: TimePeriodGroup[] = [
   { id: "antiquity", name: "Antiquity", color: "#c99a44" },
   { id: "print-era", name: "Print Era", color: "#b98f5e" },
