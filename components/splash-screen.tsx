@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// Sequence from docs/features/splash/overview.md: the ribbon expands and blooms in first,
-// then swiftly fades away just as "Then." starts to appear, then the tagline fades in below.
-// See screenshots there.
+// Sequence from docs/features/splash/overview.md: the ribbon expands and blooms in first and
+// holds for 1.5s, then "Then." quickly fades in (0.2s) — only once it's appeared does the
+// ribbon begin its own swift fade-out — then the tagline fades in below. See screenshots there.
 //
 // This component never unmounts itself — once the "hold" beat's duration elapses it calls
 // onComplete but keeps rendering its final frame. The caller (app-shell) is responsible for
@@ -20,7 +20,7 @@ const NEXT_PHASE: Record<Phase, Phase | null> = {
 };
 
 const PHASE_DURATION_MS: Record<Phase, number> = {
-  ribbon: 600,
+  ribbon: 1500,
   wordmark: 900,
   tagline: 700,
   hold: 900,
@@ -55,7 +55,8 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
 
   const wordmarkVisible = phase !== "ribbon";
   const taglineVisible = phase === "tagline" || phase === "hold";
-  const ribbonFading = phase !== "ribbon";
+  // The ribbon only starts fading once the tagline itself begins to fade in.
+  const ribbonFading = taglineVisible;
 
   return (
     <div className="fixed inset-0 z-50 flex select-none items-center justify-center bg-black">
@@ -75,12 +76,12 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
       />
       <div className="relative flex flex-col items-center gap-3">
         <h1
-          className={`font-serif text-5xl tracking-tight text-zinc-50 transition-opacity duration-[900ms] ease-out ${
+          className={`font-serif text-5xl tracking-tight text-zinc-50 transition-opacity duration-[200ms] ease-out ${
             wordmarkVisible ? "opacity-100" : "opacity-0"
           }`}
           style={{
             textShadow: wordmarkVisible ? "0 0 40px rgba(212,164,85,0.55)" : "0 0 0 rgba(212,164,85,0)",
-            transition: "text-shadow 900ms ease-out",
+            transition: "text-shadow 200ms ease-out",
           }}
         >
           Then.
