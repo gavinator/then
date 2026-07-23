@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// Sequence from docs/features/splash/overview.md: ribbon fades in first, then "Then." blooms
-// in centered on the ribbon, then the tagline fades in below. See screenshots there.
+// Sequence from docs/features/splash/overview.md: the ribbon expands and blooms in first,
+// then swiftly fades away just as "Then." starts to appear, then the tagline fades in below.
+// See screenshots there.
 //
 // This component never unmounts itself — once the "hold" beat's duration elapses it calls
 // onComplete but keeps rendering its final frame. The caller (app-shell) is responsible for
@@ -25,8 +26,12 @@ const PHASE_DURATION_MS: Record<Phase, number> = {
   hold: 900,
 };
 
+// The vertical gap between the wordmark and tagline baselines, where the ribbon now sits.
+const RIBBON_OFFSET_PX = 18;
+
 export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const [phase, setPhase] = useState<Phase>("ribbon");
+  const [ribbonExpanded, setRibbonExpanded] = useState(false);
   const completedRef = useRef(false);
 
   useEffect(() => {
@@ -42,18 +47,31 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
     return () => clearTimeout(timer);
   }, [phase, onComplete]);
 
+  useEffect(() => {
+    // Deferred one tick so the initial collapsed state paints before transitioning to expanded.
+    const timer = setTimeout(() => setRibbonExpanded(true), 20);
+    return () => clearTimeout(timer);
+  }, []);
+
   const wordmarkVisible = phase !== "ribbon";
   const taglineVisible = phase === "tagline" || phase === "hold";
-  const ribbonFading = phase === "tagline" || phase === "hold";
+  const ribbonFading = phase !== "ribbon";
 
   return (
     <div className="fixed inset-0 z-50 flex select-none items-center justify-center bg-black">
       <div
         aria-hidden
-        className={`absolute left-1/2 top-1/2 h-px w-64 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-700 ease-out ${
-          ribbonFading ? "opacity-0" : "opacity-100"
+        className={`absolute left-1/2 top-1/2 h-px ease-out ${
+          ribbonFading
+            ? "w-64 opacity-0 transition-opacity duration-200"
+            : ribbonExpanded
+              ? "w-64 opacity-100 transition-all duration-500"
+              : "w-0 opacity-0 transition-all duration-500"
         }`}
-        style={{ background: "linear-gradient(90deg, transparent, #d4a455, transparent)" }}
+        style={{
+          background: "linear-gradient(90deg, transparent, #d4a455, transparent)",
+          transform: `translate(-50%, calc(-50% + ${RIBBON_OFFSET_PX}px))`,
+        }}
       />
       <div className="relative flex flex-col items-center gap-3">
         <h1

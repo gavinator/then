@@ -40,7 +40,7 @@ export function HomeScreen({
 
   return (
     <main
-      className={`mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-8 px-6 py-16 text-zinc-50 ${fadeDelays ? "pointer-events-none" : ""}`}
+      className={`relative mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-8 px-6 py-16 text-zinc-50 ${fadeDelays ? "pointer-events-none" : ""}`}
       style={{
         background: `radial-gradient(ellipse 140% 75% at 50% 16%, ${accentColor}66, ${accentColor}2e 55%, transparent 90%), #0a0a0a`,
       }}
@@ -64,6 +64,14 @@ export function HomeScreen({
       <div className={fadeClass} style={fadeStyle(4)}>
         <TravelButton accentColor={accentColor} onClick={handleTravel} />
       </div>
+
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute inset-0 bg-black transition-opacity ease-out ${
+          fadeDelays ? "opacity-100" : "opacity-0"
+        }`}
+        style={fadeDelays ? { transitionDuration: `${DISINTEGRATE_TOTAL_MS}ms` } : undefined}
+      />
     </main>
   );
 }

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { formatYear } from "@/lib/time-periods";
 
-const RESOLVE_DELAY_MS = 2200;
+const RESOLVE_DELAY_MS = 4200;
 
 export function TravelTransition({
   year,
@@ -32,6 +32,7 @@ export function TravelTransition({
   }
 
   const formattedYear = formatYear(year);
+  const preposition = destination.trim().toLowerCase() === "the moon" ? "on" : "in";
 
   return (
     <div
@@ -56,7 +57,7 @@ export function TravelTransition({
 
       <p className="max-w-xs font-serif text-2xl italic leading-snug text-zinc-100">
         {resolved
-          ? `The signal resolves. The year is ${formattedYear} in ${destination}.`
+          ? `The signal resolves. The year is ${formattedYear} ${preposition} ${destination}.`
           : `${formattedYear}. The signal is faint, if the count holds.`}
       </p>
 
