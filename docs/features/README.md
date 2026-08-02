@@ -18,3 +18,16 @@ Add `Status: exploring | ready to build | shipped` line at the top of each `over
 ## Known gap
 
 `docs/features/initial-mobile-flow-v1.md` predates this folder convention and doesn't follow it (no subfolder, no artifacts.md). It also describes a flow that contradicts the current Home spec — see the flag at the top of that file and the corresponding entry in [docs/product-decisions.md](../product-decisions.md).
+
+## Per-instance content screens
+
+`newspapers/` and `newspaper-articles/` are a variant of the convention above: `overview.md` (the spec) lives at the screen-type level, since both are a single parameterized template across all time period groups — not bespoke per instance. Each instance subfolder underneath holds only the fixture-specific reference material:
+
+```
+docs/features/newspapers/overview.md
+docs/features/newspapers/<year-destination>/          (artifacts.md, screenshots/)
+docs/features/newspaper-articles/overview.md
+docs/features/newspaper-articles/<year-destination>/  (artifacts.md, screenshots/)
+```
+
+Instance folders use kebab-case (`rome-100-bce`), matching the rest of the repo. See [docs/features/newspapers/overview.md](newspapers/overview.md#visual-language-per-time-period-group) for how the template's visual language varies by time period group, and that doc's "Known instances" section for the current list.

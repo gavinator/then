@@ -23,7 +23,7 @@ See [docs/features/](features/) for per-screen specs (layout, interaction, anima
 - Muted text: medium warm gray
 - Signal/accuracy indicators: amber fading to blue across the temporal spectrum
 
-[DECISION NEEDED] What does the signal/accuracy indicator actually measure — is there an in-fiction reliability/hallucination mechanic tied to it, or is it purely decorative (era distance)?
+Confirmed as an in-fiction reliability mechanic, not decorative — surfaced concretely as the "TEMPORAL ACCURACY: NN%" badge on the newspaper article screen (see [docs/features/newspaper-articles/overview.md](features/newspaper-articles/overview.md)). [DECISION NEEDED] what specifically drives the number (a real computed measure vs. an authored/random value per fixture) — see [product-decisions.md](product-decisions.md).
 
 Each time period group (below) carries its own accent color, used for the background glow, dividers, and the Travel button. Colors blend smoothly across the boundary as the user scrubs between adjacent groups. Per [docs/features/home/overview.md](features/home/overview.md) and its [screenshots](features/home/screenshots/):
 

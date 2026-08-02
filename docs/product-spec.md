@@ -35,8 +35,10 @@ See [features/](features/) for the per-screen specs that exist so far:
 - [features/splash/](features/splash/)
 - [features/home/](features/home/)
 - [features/travel-transition/](features/travel-transition/)
+- [features/newspapers/](features/newspapers/) — one parameterized spec, re-themed per time period group; two fixture instances so far ("rome-100-bce", "the-moon")
+- [features/newspaper-articles/](features/newspaper-articles/) — same relationship, linked from the matching newspaper
 
-No spec yet for what happens after the travel transition resolves (viewing/reading a dispatch) — see the open question in [product-decisions.md](product-decisions.md).
+What happens after the travel transition resolves is now spec'd: it lands on the newspaper (headlines) screen, which links to individual newspaper articles. See [product-decisions.md](product-decisions.md) for what that resolved and what's still open.
 
 ## Design
 

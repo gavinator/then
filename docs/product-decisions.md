@@ -25,7 +25,7 @@ Decision: The year control is a continuous, horizontally-scrollable picker (not 
 
 Why: Specified in [docs/features/home/overview.md](../docs/features/home/overview.md) and confirmed visually across all five group screenshots in [docs/features/home/screenshots/](../docs/features/home/screenshots/). Full taxonomy lives in [design-principles.md](design-principles.md#time-period-groups).
 
-Status: active. Not yet implemented — current code ([home-screen.tsx](../components/home/home-screen.tsx), [eras.ts](../lib/eras.ts)) still reflects the v1 bounded-slider model and only has one era's data.
+Status: active, implemented ([home-screen.tsx](../components/home/home-screen.tsx), [lib/time-periods.ts](../lib/time-periods.ts)).
 
 ## 2026-07-22 — Splash sequence
 
@@ -33,7 +33,7 @@ Decision: Splash is three beats on a plain black background (no dimmed home scre
 
 Why: Specified in [docs/features/splash/overview.md](../docs/features/splash/overview.md), shown in its three [screenshots](../docs/features/splash/screenshots/).
 
-Status: active. Not yet implemented — current code ([init-animation.tsx](../components/init-animation.tsx)) dims and reveals the Home screen from behind the overlay instead, and has no ribbon beat.
+Status: active, implemented ([splash-screen.tsx](../components/splash-screen.tsx)).
 
 ## 2026-07-22 — Travel transition screen (new)
 
@@ -41,7 +41,19 @@ Decision: Tapping "Travel" on Home moves to a dedicated transition screen: cente
 
 Why: Specified in [docs/features/travel-transition/overview.md](../docs/features/travel-transition/overview.md).
 
-Status: active, not yet implemented — no code exists for this screen yet.
+Status: active, implemented ([travel-transition.tsx](../components/travel-transition.tsx)).
+
+## 2026-07-23 — Newspaper and newspaper article screens (new)
+
+Decision: After the travel transition resolves, the user lands on a Newspaper (headlines) screen — masthead, horizontally-scrolling category pills, a lead story with image placeholder, and additional stories below — which links to a Newspaper Article screen (two-column body copy with margin footnotes, a "TEMPORAL ACCURACY: NN%" badge, a share button). Navigation between them is a horizontal push/pop slide, not the opacity crossfades used elsewhere in the app so far. The newspaper's back button returns to Home; the article's back button returns to the newspaper it came from (not Home).
+
+Both screens are a single parameterized template — one spec, re-themed per time period group — not bespoke per instance. For MVP, only specific Year+Destination fixture combinations are wired (not live-generated): Rome/100 BCE (Antiquity) and The Moon/2150 (Near-Future) so far, each with visibly distinct chrome (masthead wording, category names, footer sign-off, margin-note style, share-button style — see the comparison table in [docs/features/newspapers/overview.md](../docs/features/newspapers/overview.md#visual-language-per-time-period-group)). Deeper per-sub-era granularity (e.g. a distinct look within Modernity for "Information Age" vs. "Interwar Crisis Era") is intended eventually but out of scope for MVP.
+
+The "TEMPORAL ACCURACY: NN%" badge on the article screen is confirmed to be the same mechanic as the long-open signal/accuracy indicator question in [design-principles.md](design-principles.md#color-system) — though what specifically drives the number is still undefined. The category pills are confirmed to filter the story list conceptually, but don't need to be functional for the MVP flow. The share button doesn't need to be functional for the MVP flow either.
+
+Why: Specified in [docs/features/newspapers/overview.md](../docs/features/newspapers/overview.md) and [docs/features/newspaper-articles/overview.md](../docs/features/newspaper-articles/overview.md).
+
+Status: active, not yet implemented — no code exists for either screen yet. Resolves the "what happens after the travel transition resolves" open question below.
 
 ## Open questions (not yet decided)
 
@@ -52,7 +64,9 @@ Status: active, not yet implemented — no code exists for this screen yet.
 - [DECISION NEEDED] Save behavior for destination/year/tone selections between sessions (carried over from the now-superseded `docs/features/initial-mobile-flow-v1.md`).
 - [DECISION NEEDED] Is dispatch content generated live per request, or pre-generated and cached? Affects cost, latency, and whether "unhurried" in the design philosophy means the UI is deliberately paced or that generation genuinely takes time and the UI leans into that wait. The travel transition screen's planned progress-indicator role (above) depends on this.
 - [DECISION NEEDED] Is there a notion of session/history — saved dispatches, favorites, a "logbook" of eras visited — or is every visit ephemeral and stateless?
-- [DECISION NEEDED] What does the signal/accuracy indicator represent mechanically (see [design-principles.md](design-principles.md))?
+- [DECISION NEEDED] What does the signal/accuracy indicator, aka "TEMPORAL ACCURACY: NN%" on the article screen, actually derive from (a real computed measure vs. an authored/random value per fixture)?
 - [DECISION NEEDED] Accounts, auth, monetization — free, subscription, or none of the above for v1?
 - [DECISION NEEDED] Content moderation / guardrails for AI-generated "news" — especially for near-future dispatches that could read as real predictions, or historical dispatches touching real sensitive events.
-- [DECISION NEEDED] What happens after the travel transition resolves — is "view headlines" → "read article" (from `initial-mobile-flow-v1.md`) still the intended next screens? No spec exists yet for either.
+- [DECISION NEEDED] Is real generated imagery planned for the newspaper/article lead-story placeholder, or is a captioned placeholder box the permanent treatment?
+- [DECISION NEEDED] Each story's kicker label (e.g. "THE ASSEMBLY", "THE FRONTIER") doesn't exactly match any of that newspaper's category pill names, in either fixture instance — separate taxonomy, or should they map onto the pill categories?
+- [DECISION NEEDED] The `the-moon` instance folder omits a year (unlike `rome-100-bce`) — confirm it's 2150 per its screenshots and whether it should be renamed `the-moon-2150` for consistency and to allow other years at the same destination later.
