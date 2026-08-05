@@ -53,7 +53,19 @@ The "TEMPORAL ACCURACY: NN%" badge on the article screen is confirmed to be the 
 
 Why: Specified in [docs/features/newspapers/overview.md](../docs/features/newspapers/overview.md) and [docs/features/newspaper-articles/overview.md](../docs/features/newspaper-articles/overview.md).
 
-Status: active, not yet implemented — no code exists for either screen yet. Resolves the "what happens after the travel transition resolves" open question below.
+Status: active, implemented ([newspaper-screen.tsx](../components/newspaper/newspaper-screen.tsx), [newspaper-article-screen.tsx](../components/newspaper/newspaper-article-screen.tsx), [newspaper-stack.tsx](../components/newspaper/newspaper-stack.tsx), fixture data in [lib/newspaper-data.ts](../lib/newspaper-data.ts), theme tokens in [lib/newspaper-theme.ts](../lib/newspaper-theme.ts)). `TravelTransition` now takes an `onContinue` callback fired on tap after the signal resolves ("TAP TO CONTINUE" replaces the now-hidden "TAP TO RETURN"); `AppShell` looks up a fixture for the traveled-to year+destination and routes to the newspaper if one exists, back to Home otherwise. Resolves the "what happens after the travel transition resolves" open question below. Only the lead story is wired to an article on either fixture — the other three stories per fixture have no article copy authored yet, so they render but aren't clickable.
+
+## 2026-08-04 — Newspaper/article transition polish and in-session Home state
+
+Decision: Four refinements to the newspaper flow:
+1. The Destination field shows a clear (×) button whenever it has a value ([destination-field.tsx](../components/home/destination-field.tsx)).
+2. Tapping "TAP TO CONTINUE" on the resolved travel transition now gently cross-fades the whole screen into the newspaper, instead of cutting instantly.
+3. The newspaper's back button no longer jumps straight to Home — it cross-fades (slightly longer than the outbound one) through a new `ReturningTransition` screen: the same pulsing dot as "SIGNAL RESOLVING", relabeled "RETURNING", with no tap affordance since it advances on its own.
+4. Home's year/destination/tone selections now persist for the rest of the browser session — leaving for the newspaper and coming back leaves the picker where it was, rather than resetting to defaults.
+
+Why: Requested directly; (4) specifically was a bug from HomeScreen owning that state locally and unmounting on every screen change.
+
+Status: active, implemented. `AppShell` now owns year/destination/tone (`components/app-shell.tsx`); both crossfades follow the existing splash→home pattern (overlay stays mounted and fades its own opacity while the next screen mounts underneath) rather than introducing a new technique. Shared crossfade durations live in [lib/transition-timing.ts](../lib/transition-timing.ts). Note this is in-session persistence only (state lives in React, not storage) — it does not resolve the "save behavior... between sessions" open question below, which is about surviving a page reload/new visit.
 
 ## Open questions (not yet decided)
 

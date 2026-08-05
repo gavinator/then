@@ -24,6 +24,7 @@ export function DestinationField({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const updateScrollState = useCallback(() => {
     const el = scrollRef.current;
@@ -66,16 +67,34 @@ export function DestinationField({
       <label htmlFor="destination" className="text-xs tracking-[0.25em] text-zinc-500">
         DESTINATION
       </label>
-      <input
-        id="destination"
-        type="text"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        onBlur={commit}
-        onKeyDown={handleKeyDown}
-        placeholder="Where does the signal find you?"
-        className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-3 text-zinc-100 placeholder:text-zinc-600 focus:border-white/30 focus:outline-none"
-      />
+      <div className="relative">
+        <input
+          ref={inputRef}
+          id="destination"
+          type="text"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          onBlur={commit}
+          onKeyDown={handleKeyDown}
+          placeholder="Where does the signal find you?"
+          className="w-full rounded-lg border border-white/10 bg-black/40 px-4 py-3 pr-10 text-zinc-100 placeholder:text-zinc-600 focus:border-white/30 focus:outline-none"
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={() => {
+              onChange("");
+              inputRef.current?.focus();
+            }}
+            aria-label="Clear destination"
+            className="absolute right-[12px] top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-zinc-500 hover:text-zinc-200"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+              <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
+      </div>
       <div
         ref={scrollRef}
         className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"

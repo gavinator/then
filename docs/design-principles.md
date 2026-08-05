@@ -54,7 +54,7 @@ Five groups, each containing named sub-eras with their own year ranges. The larg
 **Modernity** — clean newsprint: black, white, red accents
 - Industrial Revolution — c. 1800 CE – 1914 CE
 - Interwar Crisis Era — 1914 – 1947
-- Information Age — 1947 CE – present year
+- Information Age — 1947 – 2030
 
 **Near-Future** — deep space black, geometric thin sans, electric blue and silver accents
 - Climate Apocalypse Era — 2030 – 2055
@@ -65,8 +65,6 @@ Five groups, each containing named sub-eras with their own year ranges. The larg
 **Deep Future** — deep space black, more cryptic, electric purple accents
 - Cosmos Era — 2300 – 2600
 - Anthropocene Maximum — 2600 – 3000
-
-[DECISION NEEDED] Information Age is specified as ending "present year" (dynamic), but the Home prototype's own screenshot shows it hard-bounded to 2030 (matching where Near-Future's Climate Apocalypse Era begins). Confirm whether Information Age's upper bound is meant to float with the real-world current date, or whether 2030 is the actual fixed boundary and "present year" in this doc is just describing today's era loosely.
 
 Transition between time period groups uses a gradient/blend as the user scrubs between them — no hard cuts at boundaries.
 

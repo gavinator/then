@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 import { formatYear } from "@/lib/time-periods";
+import { CONTINUE_CROSSFADE_MS } from "@/lib/transition-timing";
 
 const RESOLVE_DELAY_MS = 4200;
 const CONTENT_FADE_MS = 200;
@@ -36,11 +37,17 @@ export function TravelTransition({
   destination,
   accentColor,
   onReturn,
+  onContinue,
+  fading = false,
 }: {
   year: number;
   destination: string;
   accentColor: string;
   onReturn: () => void;
+  onContinue: () => void;
+  // Set once onContinue has fired, to gently cross-fade this screen out and reveal the
+  // newspaper mounted underneath — see app-shell.tsx.
+  fading?: boolean;
 }) {
   const [resolved, setResolved] = useState(false);
 
@@ -49,10 +56,18 @@ export function TravelTransition({
     return () => clearTimeout(timer);
   }, []);
 
+  function handleTap() {
+    if (resolved) {
+      onContinue();
+    } else {
+      onReturn();
+    }
+  }
+
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      onReturn();
+      handleTap();
     }
   }
 
@@ -63,10 +78,13 @@ export function TravelTransition({
     <div
       role="button"
       tabIndex={0}
-      aria-label="Tap to return to Home"
-      onClick={onReturn}
-      onKeyDown={handleKeyDown}
-      className="fixed inset-0 z-50 flex cursor-pointer flex-col items-center justify-center gap-6 bg-black px-8 text-center"
+      aria-label={resolved ? "Tap to continue" : "Tap to return to Home"}
+      onClick={fading ? undefined : handleTap}
+      onKeyDown={fading ? undefined : handleKeyDown}
+      className={`fixed inset-0 z-50 flex cursor-pointer flex-col items-center justify-center gap-6 bg-black px-8 text-center transition-opacity ease-out ${
+        fading ? "pointer-events-none opacity-0" : "opacity-100"
+      }`}
+      style={{ transitionDuration: `${CONTINUE_CROSSFADE_MS}ms` }}
     >
       {/* Mounted once, never remounted — it should just stop pulsing when resolved, not fade
           or reappear along with the text below. */}
@@ -91,7 +109,7 @@ export function TravelTransition({
             : `${formattedYear}. The signal is faint, if the count holds.`}
         </p>
 
-        <span className={`text-xs tracking-[0.3em] text-zinc-500 ${resolved ? "invisible" : ""}`}>TAP TO RETURN</span>
+        <span className="text-xs tracking-[0.3em] text-zinc-500">{resolved ? "TAP TO CONTINUE" : "TAP TO RETURN"}</span>
       </FadeIn>
     </div>
   );
