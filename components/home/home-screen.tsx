@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DEFAULT_YEAR, getAccentColorForYear, getSubEraForYear } from "@/lib/time-periods";
-import { defaultTone, type Tone } from "@/lib/tones";
+import { getAccentColorForYear, getSubEraForYear } from "@/lib/time-periods";
+import type { Tone } from "@/lib/tones";
 import { YearPicker } from "./year-picker";
 import { DestinationField } from "./destination-field";
 import { ToneSelector } from "./tone-selector";
@@ -22,18 +22,47 @@ const BACKGROUND_FADE_DELAY_MS = 1000;
 const BACKGROUND_FADE_MS = 1000;
 const DISINTEGRATE_TOTAL_MS = BACKGROUND_FADE_DELAY_MS + BACKGROUND_FADE_MS;
 
+// Hidden testing shortcut, not a documented feature: tapping the "Then." wordmark cycles the
+// year/destination through these two fixture combos so the newspaper flow can be reached
+// without hand-scrubbing the year picker each time. No visual affordance hints it's tappable.
+const WORDMARK_TAP_PRESETS: { year: number; destination: string }[] = [
+  { year: -100, destination: "Rome" },
+  { year: 2150, destination: "The Moon" },
+];
+
 export function HomeScreen({
+  year,
+  onYearChange,
+  destination,
+  onDestinationChange,
+  tone,
+  onToneChange,
   onTravel,
+  animateYearIntro = false,
+  onYearIntroComplete,
 }: {
+  year: number;
+  onYearChange: (year: number) => void;
+  destination: string;
+  onDestinationChange: (destination: string) => void;
+  tone: Tone;
+  onToneChange: (tone: Tone) => void;
   onTravel: (year: number, destination: string) => void;
+  animateYearIntro?: boolean;
+  onYearIntroComplete?: () => void;
 }) {
-  const [year, setYear] = useState(DEFAULT_YEAR);
-  const [destination, setDestination] = useState("");
-  const [tone, setTone] = useState<Tone>(defaultTone);
   const [fadeDelays, setFadeDelays] = useState<number[] | null>(null);
+  const [presetIndex, setPresetIndex] = useState(0);
 
   const subEra = useMemo(() => getSubEraForYear(year), [year]);
   const accentColor = useMemo(() => getAccentColorForYear(year), [year]);
+
+  function handleWordmarkTap() {
+    const preset = WORDMARK_TAP_PRESETS[presetIndex % WORDMARK_TAP_PRESETS.length];
+    onYearChange(preset.year);
+    onDestinationChange(preset.destination);
+    setPresetIndex((index) => index + 1);
+  }
 
   function handleTravel() {
     if (fadeDelays) return;
@@ -56,7 +85,7 @@ export function HomeScreen({
     >
       <div>
         <header className="pb-4">
-          <span className="font-serif text-4xl tracking-tight">
+          <span className="font-serif text-4xl tracking-tight" onClick={handleWordmarkTap}>
             <span
               className={`transition-opacity duration-300 ${fadeDelays ? "opacity-0" : "opacity-100"}`}
               style={fadeDelays ? { transitionDelay: `${WORDMARK_FADE_DELAY_MS}ms` } : undefined}
@@ -77,15 +106,22 @@ export function HomeScreen({
       </div>
 
       <div className={fadeClass} style={fadeStyle(0)}>
-        <YearPicker year={year} subEra={subEra} accentColor={accentColor} onChange={setYear} />
+        <YearPicker
+          year={year}
+          subEra={subEra}
+          accentColor={accentColor}
+          onChange={onYearChange}
+          animateIntro={animateYearIntro}
+          onIntroComplete={onYearIntroComplete}
+        />
       </div>
 
       <div className={fadeClass} style={fadeStyle(1)}>
-        <DestinationField value={destination} onChange={setDestination} />
+        <DestinationField value={destination} onChange={onDestinationChange} />
       </div>
 
       <div className={fadeClass} style={fadeStyle(2)}>
-        <ToneSelector value={tone} onChange={setTone} />
+        <ToneSelector value={tone} onChange={onToneChange} />
       </div>
 
       <div className={fadeClass} style={fadeStyle(3)}>

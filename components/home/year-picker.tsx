@@ -22,6 +22,15 @@ const FRICTION_PER_MS = 0.995;
 const MOMENTUM_STOP_VELOCITY = 0.02; // px/ms
 const TAP_MOVE_THRESHOLD_PX = 4;
 
+// Purely a first-impression flourish, hinting the big number is scrollable — doesn't touch
+// the real committed year (already 2026, the default), so it never calls onChange.
+const INTRO_START_YEAR = 1984;
+const INTRO_DURATION_MS = 1000;
+
+function easeOutCubic(t: number) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
 function clampYear(year: number) {
   return Math.min(MAX_YEAR, Math.max(MIN_YEAR, year));
 }
@@ -31,14 +40,20 @@ export function YearPicker({
   subEra,
   accentColor,
   onChange,
+  animateIntro = false,
+  onIntroComplete,
 }: {
   year: number;
   subEra: SubEra;
   accentColor: string;
   onChange: (year: number) => void;
+  // Ticks the displayed number up from 1984 to `year` over INTRO_DURATION_MS, once, on mount.
+  animateIntro?: boolean;
+  onIntroComplete?: () => void;
 }) {
   const [displayYear, setDisplayYear] = useState(quantizeYear(year));
   const [dragging, setDragging] = useState(false);
+  const [introYear, setIntroYear] = useState<number | null>(animateIntro ? INTRO_START_YEAR : null);
 
   const dragState = useRef({
     pointerId: -1,
@@ -59,6 +74,33 @@ export function YearPicker({
       setDisplayYear(quantized);
     }
   }, [year, dragging]);
+
+  const onIntroCompleteRef = useRef(onIntroComplete);
+  useEffect(() => {
+    onIntroCompleteRef.current = onIntroComplete;
+  }, [onIntroComplete]);
+
+  useEffect(() => {
+    if (!animateIntro) return;
+    const targetYear = year;
+    const startTime = performance.now();
+    let raf: number;
+    function tick(now: number) {
+      const t = Math.min(1, (now - startTime) / INTRO_DURATION_MS);
+      const eased = easeOutCubic(t);
+      setIntroYear(INTRO_START_YEAR + (targetYear - INTRO_START_YEAR) * eased);
+      if (t < 1) {
+        raf = requestAnimationFrame(tick);
+      } else {
+        setIntroYear(null);
+        onIntroCompleteRef.current?.();
+      }
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+    // Runs once on mount only — this is a one-shot intro flourish, not a response to prop changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // `explicitStep`, when given, is the step size the caller used to compute `raw` (e.g. a
   // keyboard or tap nudge). Quantizing against that step — rather than re-deriving it from
@@ -200,8 +242,8 @@ export function YearPicker({
 
   useEffect(() => stopMomentum, [stopMomentum]);
 
-  const rounded = displayYear;
-  const tickOffset = -((displayYear * PIXELS_PER_YEAR) % TICK_SPACING_PX);
+  const rounded = introYear !== null ? Math.round(introYear) : displayYear;
+  const tickOffset = -((rounded * PIXELS_PER_YEAR) % TICK_SPACING_PX);
   const centerLabel = formatYear(rounded);
 
   return (
