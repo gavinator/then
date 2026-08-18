@@ -22,6 +22,46 @@ const FRICTION_PER_MS = 0.995;
 const MOMENTUM_STOP_VELOCITY = 0.02; // px/ms
 const TAP_MOVE_THRESHOLD_PX = 4;
 
+// Ruler ticks, unlike the decorative center-line ticks above, are pixel-accurate to real
+// year values (needed so content dots land exactly on their year) — so they use the true
+// drag-consistent scale (pixels per year = PIXELS_PER_YEAR / current step), not a fixed one.
+// Fine zone (step 1) gets a tick every 5 years; coarse zone (step 10) gets one every step.
+function getRulerTickIntervalYears(step: number): number {
+  return step === 1 ? 5 : step;
+}
+
+// Ticks are individually positioned DOM nodes (translateX from center), not a single
+// repeating-linear-gradient background — a gradient's background-position has to grow
+// unboundedly with `rounded * pixelsPerYear` as you scroll to extreme years, and at large
+// magnitudes that hits float-precision limits in the browser's gradient rasterizer, producing
+// a periodic doubled/misaligned tick. Per-tick offsets from center stay small and bounded
+// (±RULER_HALF_WIDTH_PX worth of years) no matter how far the picker has scrolled, so there's
+// no equivalent precision cliff. Generous enough to cover the widest picker (max-w-md) plus
+// margin without needing to measure the container.
+const RULER_HALF_WIDTH_PX = 260;
+
+function getRulerTicks(centerYear: number, pixelsPerYear: number, intervalYears: number): number[] {
+  const halfRangeYears = RULER_HALF_WIDTH_PX / pixelsPerYear;
+  const startYear = Math.ceil((centerYear - halfRangeYears) / intervalYears) * intervalYears;
+  const endYear = centerYear + halfRangeYears;
+  const ticks: number[] = [];
+  for (let tickYear = startYear; tickYear <= endYear; tickYear += intervalYears) {
+    ticks.push(tickYear);
+  }
+  return ticks;
+}
+
+// Web Vibration API — Android Chrome only (iOS Safari has no equivalent), so this is a bonus
+// on platforms that support it, not something to feature-detect around visually.
+const HAPTIC_TICK_MS = 5;
+const HAPTIC_CONTENT_MS = 18;
+
+function vibrate(ms: number) {
+  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+    navigator.vibrate(ms);
+  }
+}
+
 // Purely a first-impression flourish, hinting the big number is scrollable — doesn't touch
 // the real committed year (already 2026, the default), so it never calls onChange.
 const INTRO_START_YEAR = 1984;
@@ -42,6 +82,7 @@ export function YearPicker({
   onChange,
   animateIntro = false,
   onIntroComplete,
+  contentYears = [],
 }: {
   year: number;
   subEra: SubEra;
@@ -50,6 +91,9 @@ export function YearPicker({
   // Ticks the displayed number up from 1984 to `year` over INTRO_DURATION_MS, once, on mount.
   animateIntro?: boolean;
   onIntroComplete?: () => void;
+  // Years with wired content — rendered as small dots on the ruler, e.g. from
+  // lib/newspaper-data.ts's `contentYears`.
+  contentYears?: number[];
 }) {
   const [displayYear, setDisplayYear] = useState(quantizeYear(year));
   const [dragging, setDragging] = useState(false);
@@ -113,11 +157,23 @@ export function YearPicker({
       rawYearRef.current = clamped;
       const step = explicitStep ?? getYearStep(clamped);
       const quantized = Math.round(clamped / step) * step;
+      const previousYear = displayYearRef.current;
       displayYearRef.current = quantized;
       setDisplayYear(quantized);
       onChange(quantized);
+
+      if (quantized !== previousYear) {
+        if (contentYears.includes(quantized)) {
+          // Landed exactly on a content year — a heavier tap than a plain tick crossing.
+          vibrate(HAPTIC_CONTENT_MS);
+        } else {
+          const tickInterval = getRulerTickIntervalYears(step);
+          const crossedTick = Math.floor(previousYear / tickInterval) !== Math.floor(quantized / tickInterval);
+          if (crossedTick) vibrate(HAPTIC_TICK_MS);
+        }
+      }
     },
-    [onChange],
+    [onChange, contentYears],
   );
 
   const stopMomentum = useCallback(() => {
@@ -246,6 +302,18 @@ export function YearPicker({
   const tickOffset = -((rounded * PIXELS_PER_YEAR) % TICK_SPACING_PX);
   const centerLabel = formatYear(rounded);
 
+  // Ruler: pixels-per-year matches whatever a drag actually does at this zoom level (see
+  // handlePointerMove), so ticks and content dots land on their true year, not an
+  // approximation. `50%` is where `rounded` sits on screen — same as the center number above.
+  const rulerStep = getYearStep(rounded);
+  const rulerPixelsPerYear = PIXELS_PER_YEAR / rulerStep;
+  const rulerTickIntervalYears = getRulerTickIntervalYears(rulerStep);
+  // A content year always lands exactly on a tick (its interval evenly divides both zones'
+  // tick spacing) — drop the coincident tick so the dot doesn't render on top of it.
+  const rulerTicks = getRulerTicks(rounded, rulerPixelsPerYear, rulerTickIntervalYears).filter(
+    (tickYear) => !contentYears.includes(tickYear),
+  );
+
   return (
     <div
       role="slider"
@@ -261,11 +329,39 @@ export function YearPicker({
       onPointerCancel={handlePointerUp}
       onWheel={handleWheel}
       onKeyDown={handleKeyDown}
-      className={`-mt-8 flex select-none flex-col gap-4 rounded-lg border-b border-white/10 pb-6 pt-8 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
+      className={`-mt-8 flex select-none flex-col gap-4 rounded-lg border-b border-white/10 pb-6 pt-[18px] focus:outline-none focus-visible:ring-2 focus-visible:ring-white/30 ${
         dragging ? "cursor-grabbing" : "cursor-grab"
       }`}
       style={{ touchAction: "none" }}
     >
+      <div aria-hidden className="relative h-5 overflow-hidden">
+        {rulerTicks.map((tickYear) => (
+          <div
+            key={tickYear}
+            className="absolute top-1/2 h-1.5 w-px bg-[#FAFAFA]/25"
+            style={{
+              left: "50%",
+              transform: `translate(-50%, -50%) translateX(${(tickYear - rounded) * rulerPixelsPerYear}px)`,
+            }}
+          />
+        ))}
+        {contentYears.map((contentYear) => {
+          const isActive = contentYear === rounded;
+          return (
+            <span
+              key={contentYear}
+              className={`absolute top-1/2 h-1.5 w-1.5 rounded-full transition-opacity ${isActive ? "opacity-90" : "opacity-40"}`}
+              style={{
+                left: "50%",
+                transform: `translate(-50%, -50%) translateX(${(contentYear - rounded) * rulerPixelsPerYear}px)`,
+                backgroundColor: accentColor,
+                boxShadow: isActive ? `0 0 4px ${accentColor}` : undefined,
+              }}
+            />
+          );
+        })}
+      </div>
+
       <div className="relative flex h-20 items-center justify-center text-zinc-500">
         <div
           aria-hidden

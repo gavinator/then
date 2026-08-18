@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { getAccentColorForYear, getSubEraForYear } from "@/lib/time-periods";
 import type { Tone } from "@/lib/tones";
+import { contentYears } from "@/lib/newspaper-data";
 import { YearPicker } from "./year-picker";
 import { DestinationField } from "./destination-field";
 import { ToneSelector } from "./tone-selector";
@@ -113,6 +114,7 @@ export function HomeScreen({
           onChange={onYearChange}
           animateIntro={animateYearIntro}
           onIntroComplete={onYearIntroComplete}
+          contentYears={contentYears}
         />
       </div>
 

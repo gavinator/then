@@ -236,3 +236,8 @@ export function getNewspaperFixture(destination: string, year: number): Newspape
   const key = fixtureKey(destination, year);
   return fixtures.find((fixture) => fixture.key === key) ?? null;
 }
+
+// Distinct years with at least one wired fixture, regardless of destination — drives the
+// content-availability dots on the Home year picker's ruler. Stays in sync with `fixtures`
+// automatically as new instances are added.
+export const contentYears: number[] = Array.from(new Set(fixtures.map((fixture) => fixture.year)));
